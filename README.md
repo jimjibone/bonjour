@@ -111,7 +111,7 @@ import (
 
 func main() {
     // Run registration (blocking call)
-    s, err := bonjour.Register("Foo Service", "_foobar._tcp", "", 9999, []string{"txtv=1", "app=test"}, nil)
+    s, err := bonjour.Register("Foo Service", "_foobar._tcp", "", 9999, []string{"txtv=1", "app=test"}, nil, 0)
     if err != nil {
         log.Fatalln(err.Error())
     }
@@ -146,7 +146,7 @@ import (
 
 func main() {
     // Run registration (blocking call)
-    s, err := bonjour.RegisterProxy("Proxy Service", "_foobar._tcp", "", 9999, "octopus", "10.0.0.111", []string{"txtv=1", "app=test"}, nil)
+    s, err := bonjour.RegisterProxy("Proxy Service", "_foobar._tcp", "", 9999, "octopus", "10.0.0.111", []string{"txtv=1", "app=test"}, nil, 0)
     if err != nil {
         log.Fatalln(err.Error())
     }

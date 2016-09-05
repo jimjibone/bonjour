@@ -16,6 +16,8 @@ import (
 )
 
 var (
+	localDomain = "local"
+
 	// Multicast groups used by mDNS
 	mdnsGroupIPv4 = net.IPv4(224, 0, 0, 251)
 	mdnsGroupIPv6 = net.ParseIP("ff02::fb")
@@ -42,8 +44,8 @@ var (
 )
 
 // Register a service by given arguments. This call will take the system's hostname
-// and lookup IP by that hostname.
-func Register(instance, service, domain string, port int, text []string, iface *net.Interface) (*Server, error) {
+// and lookup IP by that hostname. If ttl is 0 the default will be used.
+func Register(instance, service, domain string, port int, text []string, iface *net.Interface, ttl uint32) (*Server, error) {
 	entry := NewServiceEntry(instance, service, domain)
 	entry.Port = port
 	entry.Text = text
@@ -55,7 +57,7 @@ func Register(instance, service, domain string, port int, text []string, iface *
 		return nil, fmt.Errorf("Missing service name")
 	}
 	if entry.Domain == "" {
-		entry.Domain = "local"
+		entry.Domain = localDomain
 	}
 	if entry.Port == 0 {
 		return nil, fmt.Errorf("Missing port")
@@ -93,6 +95,10 @@ func Register(instance, service, domain string, port int, text []string, iface *
 		return nil, err
 	}
 
+	if ttl != 0 {
+		s.ttl = ttl
+	}
+
 	s.service = entry
 	go s.mainloop()
 	go s.probe()
@@ -101,8 +107,8 @@ func Register(instance, service, domain string, port int, text []string, iface *
 }
 
 // Register a service proxy by given argument. This call will skip the hostname/IP lookup and
-// will use the provided values.
-func RegisterProxy(instance, service, domain string, port int, host, ip string, text []string, iface *net.Interface) (*Server, error) {
+// will use the provided values.  If ttl is 0 the default will be used.
+func RegisterProxy(instance, service, domain string, port int, host, ip string, text []string, iface *net.Interface, ttl uint32) (*Server, error) {
 	entry := NewServiceEntry(instance, service, domain)
 	entry.Port = port
 	entry.Text = text
@@ -118,7 +124,7 @@ func RegisterProxy(instance, service, domain string, port int, host, ip string, 
 		return nil, fmt.Errorf("Missing host name")
 	}
 	if entry.Domain == "" {
-		entry.Domain = "local"
+		entry.Domain = localDomain
 	}
 	if entry.Port == 0 {
 		return nil, fmt.Errorf("Missing port")
@@ -142,6 +148,10 @@ func RegisterProxy(instance, service, domain string, port int, host, ip string, 
 	s, err := newServer(iface)
 	if err != nil {
 		return nil, err
+	}
+
+	if ttl != 0 {
+		s.ttl = ttl
 	}
 
 	s.service = entry
