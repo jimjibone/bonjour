@@ -84,9 +84,9 @@ func Register(instance, service, domain string, port int, text []string, iface *
 	}
 	for i := 0; i < len(addrs); i++ {
 		if ipv4 := addrs[i].To4(); ipv4 != nil {
-			entry.AddrIPv4 = addrs[i]
+			entry.AddrIPv4 = append(entry.AddrIPv4, addrs[i])
 		} else if ipv6 := addrs[i].To16(); ipv6 != nil {
-			entry.AddrIPv6 = addrs[i]
+			entry.AddrIPv6 = append(entry.AddrIPv6, addrs[i])
 		}
 	}
 
@@ -108,7 +108,7 @@ func Register(instance, service, domain string, port int, text []string, iface *
 
 // Register a service proxy by given argument. This call will skip the hostname/IP lookup and
 // will use the provided values.  If ttl is 0 the default will be used.
-func RegisterProxy(instance, service, domain string, port int, host, ip string, text []string, iface *net.Interface, ttl uint32) (*Server, error) {
+func RegisterProxy(instance, service, domain string, port int, host string, ips []string, text []string, iface *net.Interface, ttl uint32) (*Server, error) {
 	entry := NewServiceEntry(instance, service, domain)
 	entry.Port = port
 	entry.Text = text
@@ -134,15 +134,17 @@ func RegisterProxy(instance, service, domain string, port int, host, ip string, 
 		entry.HostName = fmt.Sprintf("%s.%s.", trimDot(entry.HostName), trimDot(entry.Domain))
 	}
 
-	ipAddr := net.ParseIP(ip)
-	if ipAddr == nil {
-		return nil, fmt.Errorf("Failed to parse given IP: %v", ip)
-	} else if ipv4 := ipAddr.To4(); ipv4 != nil {
-		entry.AddrIPv4 = ipAddr
-	} else if ipv6 := ipAddr.To16(); ipv6 != nil {
-		entry.AddrIPv4 = ipAddr
-	} else {
-		return nil, fmt.Errorf("The IP is neither IPv4 nor IPv6: %#v", ipAddr)
+	for _, ip := range ips {
+		ipAddr := net.ParseIP(ip)
+		if ipAddr == nil {
+			return nil, fmt.Errorf("Failed to parse given IP: %v", ip)
+		} else if ipv4 := ipAddr.To4(); ipv4 != nil {
+			entry.AddrIPv4 = append(entry.AddrIPv4, ipAddr)
+		} else if ipv6 := ipAddr.To16(); ipv6 != nil {
+			entry.AddrIPv6 = append(entry.AddrIPv6, ipAddr)
+		} else {
+			return nil, fmt.Errorf("The IP is neither IPv4 nor IPv6: %#v", ipAddr)
+		}
 	}
 
 	s, err := newServer(iface)
@@ -161,7 +163,7 @@ func RegisterProxy(instance, service, domain string, port int, host, ip string, 
 	return s, nil
 }
 
-// Server structure incapsulates both IPv4/IPv6 UDP connections
+// Server structure encapsulates both IPv4/IPv6 UDP connections
 type Server struct {
 	service        *ServiceEntry
 	ipv4conn       *net.UDPConn
@@ -398,7 +400,7 @@ func (s *Server) composeBrowsingAnswers(resp *dns.Msg, ttl uint32) {
 	}
 	resp.Extra = append(resp.Extra, srv, txt)
 
-	if s.service.AddrIPv4 != nil {
+	for _, ipv4 := range s.service.AddrIPv4 {
 		a := &dns.A{
 			Hdr: dns.RR_Header{
 				Name:   s.service.HostName,
@@ -406,11 +408,11 @@ func (s *Server) composeBrowsingAnswers(resp *dns.Msg, ttl uint32) {
 				Class:  dns.ClassINET,
 				Ttl:    ttl,
 			},
-			A: s.service.AddrIPv4,
+			A: ipv4,
 		}
 		resp.Extra = append(resp.Extra, a)
 	}
-	if s.service.AddrIPv6 != nil {
+	for _, ipv6 := range s.service.AddrIPv6 {
 		aaaa := &dns.AAAA{
 			Hdr: dns.RR_Header{
 				Name:   s.service.HostName,
@@ -418,7 +420,7 @@ func (s *Server) composeBrowsingAnswers(resp *dns.Msg, ttl uint32) {
 				Class:  dns.ClassINET,
 				Ttl:    ttl,
 			},
-			AAAA: s.service.AddrIPv6,
+			AAAA: ipv6,
 		}
 		resp.Extra = append(resp.Extra, aaaa)
 	}
@@ -472,7 +474,7 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 	}
 	resp.Answer = append(resp.Answer, srv, txt, ptr, dnssd)
 
-	if s.service.AddrIPv4 != nil {
+	for _, ipv4 := range s.service.AddrIPv4 {
 		a := &dns.A{
 			Hdr: dns.RR_Header{
 				Name:   s.service.HostName,
@@ -480,11 +482,11 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 				Class:  dns.ClassINET | cache_flush,
 				Ttl:    120,
 			},
-			A: s.service.AddrIPv4,
+			A: ipv4,
 		}
 		resp.Extra = append(resp.Extra, a)
 	}
-	if s.service.AddrIPv6 != nil {
+	for _, ipv6 := range s.service.AddrIPv6 {
 		aaaa := &dns.AAAA{
 			Hdr: dns.RR_Header{
 				Name:   s.service.HostName,
@@ -492,7 +494,7 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 				Class:  dns.ClassINET | cache_flush,
 				Ttl:    120,
 			},
-			AAAA: s.service.AddrIPv6,
+			AAAA: ipv6,
 		}
 		resp.Extra = append(resp.Extra, aaaa)
 	}

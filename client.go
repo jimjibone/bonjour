@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/miekg/dns"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"github.com/miekg/dns"
 )
 
 // Main client data structure to run browse/lookup queries
@@ -203,13 +203,13 @@ func (c *client) mainloop(params *LookupParams) {
 				case *dns.A:
 					for k, e := range entries {
 						if e.HostName == rr.Hdr.Name && entries[k].AddrIPv4 == nil {
-							entries[k].AddrIPv4 = rr.A
+							entries[k].AddrIPv4 = append(entries[k].AddrIPv4, rr.A)
 						}
 					}
 				case *dns.AAAA:
 					for k, e := range entries {
 						if e.HostName == rr.Hdr.Name && entries[k].AddrIPv6 == nil {
-							entries[k].AddrIPv6 = rr.AAAA
+							entries[k].AddrIPv6 = append(entries[k].AddrIPv6, rr.AAAA)
 						}
 					}
 				}
