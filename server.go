@@ -165,12 +165,12 @@ func RegisterProxy(instance, service, domain string, port int, host string, ips 
 
 // Server structure encapsulates both IPv4/IPv6 UDP connections
 type Server struct {
-	service        *ServiceEntry
-	ipv4conn       *net.UDPConn
-	ipv6conn       *net.UDPConn
-	shouldShutdown bool
-	shutdownLock   sync.Mutex
-	ttl            uint32
+	service      *ServiceEntry
+	ipv4conn     *net.UDPConn
+	ipv6conn     *net.UDPConn
+	shuttingDown bool
+	shutdownLock sync.Mutex
+	ttl          uint32
 }
 
 // Constructs server structure
@@ -257,12 +257,12 @@ func (s *Server) shutdown() error {
 	s.shutdownLock.Lock()
 	defer s.shutdownLock.Unlock()
 
-	s.unregister()
-
-	if s.shouldShutdown {
+	if s.shuttingDown {
 		return nil
 	}
-	s.shouldShutdown = true
+	s.shuttingDown = true
+
+	s.unregister()
 
 	if s.ipv4conn != nil {
 		s.ipv4conn.Close()
@@ -279,7 +279,7 @@ func (s *Server) recv(c *net.UDPConn) {
 		return
 	}
 	buf := make([]byte, 65536)
-	for !s.shouldShutdown {
+	for !s.shuttingDown {
 		n, from, err := c.ReadFrom(buf)
 		if err != nil {
 			continue
