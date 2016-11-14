@@ -76,18 +76,24 @@ func Register(instance, service, domain string, port int, text []string, iface *
 	}
 
 	// GetLocalIP returns the non loopback local IP of the host
-	iaddrs, err := net.InterfaceAddrs()
+	intfs, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, address := range iaddrs {
-		// check the address type and if it is not a loopback the display it
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && !ipnet.IP.IsLinkLocalUnicast() {
-			if ipnet.IP.To4() != nil {
-				entry.AddrIPv4 = append(entry.AddrIPv4, ipnet.IP)
-			} else if ipnet.IP.To16() != nil {
-				entry.AddrIPv6 = append(entry.AddrIPv6, ipnet.IP)
+	for _, intf := range intfs {
+		if strings.HasPrefix(intf.Name, "docker") {
+			continue
+		}
+
+		for _, address := range intf.Addrs() {
+			// check the address type and if it is not a loopback the display it
+			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && !ipnet.IP.IsLinkLocalUnicast() {
+				if ipnet.IP.To4() != nil {
+					entry.AddrIPv4 = append(entry.AddrIPv4, ipnet.IP)
+				} else if ipnet.IP.To16() != nil {
+					entry.AddrIPv6 = append(entry.AddrIPv6, ipnet.IP)
+				}
 			}
 		}
 	}
