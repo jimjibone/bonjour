@@ -79,7 +79,7 @@ func Register(instance, service, domain string, port int, text []string, iface *
 
 	for _, address := range iaddrs {
 		// check the address type and if it is not a loopback the display it
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && !ipnet.IP.IsLinkLocalUnicast() {
 			if ipnet.IP.To4() != nil {
 				entry.AddrIPv4 = ipnet.IP
 			} else if ipnet.IP.To16() != nil {
