@@ -111,7 +111,7 @@ func Register(instance, service, domain string, port int, text []string, iface *
 		s.ttl = ttl
 	}
 
-	s.service = entry
+	s.Service = entry
 	go s.mainloop()
 	go s.probe()
 
@@ -168,7 +168,7 @@ func RegisterProxy(instance, service, domain string, port int, host string, ips 
 		s.ttl = ttl
 	}
 
-	s.service = entry
+	s.Service = entry
 	go s.mainloop()
 	go s.probe()
 
@@ -177,7 +177,7 @@ func RegisterProxy(instance, service, domain string, port int, host string, ips 
 
 // Server structure encapsulates both IPv4/IPv6 UDP connections
 type Server struct {
-	service      *ServiceEntry
+	Service      *ServiceEntry
 	ipv4conn     *net.UDPConn
 	ipv6conn     *net.UDPConn
 	shuttingDown bool
@@ -255,7 +255,7 @@ func (s *Server) Shutdown() {
 
 // SetText updates and announces the TXT records
 func (s *Server) SetText(text []string) {
-	s.service.Text = text
+	s.Service.Text = text
 	s.announceText()
 }
 
@@ -361,17 +361,17 @@ func (s *Server) handleQuery(query *dns.Msg, from net.Addr) error {
 
 // handleQuestion is used to handle an incoming question
 func (s *Server) handleQuestion(q dns.Question, resp *dns.Msg) error {
-	if s.service == nil {
+	if s.Service == nil {
 		return nil
 	}
 
 	switch q.Name {
-	case s.service.ServiceName():
+	case s.Service.ServiceName():
 		s.composeBrowsingAnswers(resp, s.ttl)
-	case s.service.ServiceInstanceName():
+	case s.Service.ServiceInstanceName():
 		s.composeLookupAnswers(resp, s.ttl)
-	case s.service.ServiceTypeName():
-		s.serviceTypeName(resp, s.ttl)
+	case s.Service.ServiceTypeName():
+		s.ServiceTypeName(resp, s.ttl)
 	}
 
 	return nil
@@ -380,42 +380,42 @@ func (s *Server) handleQuestion(q dns.Question, resp *dns.Msg) error {
 func (s *Server) composeBrowsingAnswers(resp *dns.Msg, ttl uint32) {
 	ptr := &dns.PTR{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceName(),
+			Name:   s.Service.ServiceName(),
 			Rrtype: dns.TypePTR,
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
-		Ptr: s.service.ServiceInstanceName(),
+		Ptr: s.Service.ServiceInstanceName(),
 	}
 	resp.Answer = append(resp.Answer, ptr)
 
 	txt := &dns.TXT{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeTXT,
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
-		Txt: s.service.Text,
+		Txt: s.Service.Text,
 	}
 	srv := &dns.SRV{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeSRV,
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
 		Priority: 0,
 		Weight:   0,
-		Port:     uint16(s.service.Port),
-		Target:   s.service.HostName,
+		Port:     uint16(s.Service.Port),
+		Target:   s.Service.HostName,
 	}
 	resp.Extra = append(resp.Extra, srv, txt)
 
-	for _, ipv4 := range s.service.AddrIPv4 {
+	for _, ipv4 := range s.Service.AddrIPv4 {
 		a := &dns.A{
 			Hdr: dns.RR_Header{
-				Name:   s.service.HostName,
+				Name:   s.Service.HostName,
 				Rrtype: dns.TypeA,
 				Class:  dns.ClassINET,
 				Ttl:    ttl,
@@ -424,10 +424,10 @@ func (s *Server) composeBrowsingAnswers(resp *dns.Msg, ttl uint32) {
 		}
 		resp.Extra = append(resp.Extra, a)
 	}
-	for _, ipv6 := range s.service.AddrIPv6 {
+	for _, ipv6 := range s.Service.AddrIPv6 {
 		aaaa := &dns.AAAA{
 			Hdr: dns.RR_Header{
-				Name:   s.service.HostName,
+				Name:   s.Service.HostName,
 				Rrtype: dns.TypeAAAA,
 				Class:  dns.ClassINET,
 				Ttl:    ttl,
@@ -447,49 +447,49 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 	cache_flush := uint16(1 << 15)
 	ptr := &dns.PTR{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceName(),
+			Name:   s.Service.ServiceName(),
 			Rrtype: dns.TypePTR,
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
-		Ptr: s.service.ServiceInstanceName(),
+		Ptr: s.Service.ServiceInstanceName(),
 	}
 	srv := &dns.SRV{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeSRV,
 			Class:  dns.ClassINET | cache_flush,
 			Ttl:    ttl,
 		},
 		Priority: 0,
 		Weight:   0,
-		Port:     uint16(s.service.Port),
-		Target:   s.service.HostName,
+		Port:     uint16(s.Service.Port),
+		Target:   s.Service.HostName,
 	}
 	txt := &dns.TXT{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeTXT,
 			Class:  dns.ClassINET | cache_flush,
 			Ttl:    ttl,
 		},
-		Txt: s.service.Text,
+		Txt: s.Service.Text,
 	}
 	dnssd := &dns.PTR{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceTypeName(),
+			Name:   s.Service.ServiceTypeName(),
 			Rrtype: dns.TypePTR,
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
-		Ptr: s.service.ServiceName(),
+		Ptr: s.Service.ServiceName(),
 	}
 	resp.Answer = append(resp.Answer, srv, txt, ptr, dnssd)
 
-	for _, ipv4 := range s.service.AddrIPv4 {
+	for _, ipv4 := range s.Service.AddrIPv4 {
 		a := &dns.A{
 			Hdr: dns.RR_Header{
-				Name:   s.service.HostName,
+				Name:   s.Service.HostName,
 				Rrtype: dns.TypeA,
 				Class:  dns.ClassINET | cache_flush,
 				Ttl:    120,
@@ -498,10 +498,10 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 		}
 		resp.Extra = append(resp.Extra, a)
 	}
-	for _, ipv6 := range s.service.AddrIPv6 {
+	for _, ipv6 := range s.Service.AddrIPv6 {
 		aaaa := &dns.AAAA{
 			Hdr: dns.RR_Header{
-				Name:   s.service.HostName,
+				Name:   s.Service.HostName,
 				Rrtype: dns.TypeAAAA,
 				Class:  dns.ClassINET | cache_flush,
 				Ttl:    120,
@@ -523,12 +523,12 @@ func (s *Server) serviceTypeName(resp *dns.Msg, ttl uint32) {
 	//    "_http._tcp.<Domain>".
 	dnssd := &dns.PTR{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceTypeName(),
+			Name:   s.Service.ServiceTypeName(),
 			Rrtype: dns.TypePTR,
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
-		Ptr: s.service.ServiceName(),
+		Ptr: s.Service.ServiceName(),
 	}
 	resp.Answer = append(resp.Answer, dnssd)
 }
@@ -537,29 +537,29 @@ func (s *Server) serviceTypeName(resp *dns.Msg, ttl uint32) {
 //TODO: implement a proper probing & conflict resolution
 func (s *Server) probe() {
 	q := new(dns.Msg)
-	q.SetQuestion(s.service.ServiceInstanceName(), dns.TypePTR)
+	q.SetQuestion(s.Service.ServiceInstanceName(), dns.TypePTR)
 	q.RecursionDesired = false
 
 	srv := &dns.SRV{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeSRV,
 			Class:  dns.ClassINET,
 			Ttl:    s.ttl,
 		},
 		Priority: 0,
 		Weight:   0,
-		Port:     uint16(s.service.Port),
-		Target:   s.service.HostName,
+		Port:     uint16(s.Service.Port),
+		Target:   s.Service.HostName,
 	}
 	txt := &dns.TXT{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeTXT,
 			Class:  dns.ClassINET,
 			Ttl:    s.ttl,
 		},
-		Txt: s.service.Text,
+		Txt: s.Service.Text,
 	}
 	q.Ns = []dns.RR{srv, txt}
 
@@ -599,12 +599,12 @@ func (s *Server) announceText() {
 
 	txt := &dns.TXT{
 		Hdr: dns.RR_Header{
-			Name:   s.service.ServiceInstanceName(),
+			Name:   s.Service.ServiceInstanceName(),
 			Rrtype: dns.TypeTXT,
 			Class:  dns.ClassINET | 1<<15,
 			Ttl:    s.ttl,
 		},
-		Txt: s.service.Text,
+		Txt: s.Service.Text,
 	}
 
 	resp.Answer = []dns.RR{txt}
