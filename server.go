@@ -69,7 +69,9 @@ func Register(instance, service, domain string, port int, text []string, iface *
 		}
 	}
 	entry.HostName = fmt.Sprintf("%s.", trimDot(entry.HostName))
-
+	if !strings.HasSuffix(trimDot(entry.HostName), entry.Domain) {
+		entry.HostName = fmt.Sprintf("%s.%s.", trimDot(entry.HostName), trimDot(entry.Domain))
+	}
 
 	// GetLocalIP returns the non loopback local IP of the host
 	iaddrs, err := net.InterfaceAddrs()
