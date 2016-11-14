@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/miekg/dns"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"github.com/miekg/dns"
 )
 
 // Main client data structure to run browse/lookup queries
@@ -71,7 +71,7 @@ func defaultParams(service string) *LookupParams {
 	return NewLookupParams("", service, "local", make(chan *ServiceEntry))
 }
 
-// Client structure incapsulates both IPv4/IPv6 UDP connections
+// Client structure encapsulates both IPv4/IPv6 UDP connections
 type client struct {
 	ipv4conn  *net.UDPConn
 	ipv6conn  *net.UDPConn
@@ -201,15 +201,15 @@ func (c *client) mainloop(params *LookupParams) {
 					entries[rr.Hdr.Name].Text = rr.Txt
 					entries[rr.Hdr.Name].TTL = rr.Hdr.Ttl
 				case *dns.A:
-					for k, e := range entries {
-						if e.HostName == rr.Hdr.Name && entries[k].AddrIPv4 == nil {
-							entries[k].AddrIPv4 = rr.A
+					for _, e := range entries {
+						if e.HostName == rr.Hdr.Name {
+							e.AddrIPv4 = append(e.AddrIPv4, rr.A)
 						}
 					}
 				case *dns.AAAA:
-					for k, e := range entries {
-						if e.HostName == rr.Hdr.Name && entries[k].AddrIPv6 == nil {
-							entries[k].AddrIPv6 = rr.AAAA
+					for _, e := range entries {
+						if e.HostName == rr.Hdr.Name {
+							e.AddrIPv6 = append(e.AddrIPv6, rr.AAAA)
 						}
 					}
 				}
@@ -290,15 +290,14 @@ func (c *client) query(params *LookupParams) error {
 
 	// send the query
 	m := new(dns.Msg)
+	m.RecursionDesired = false
 	if serviceInstanceName != "" {
 		m.Question = []dns.Question{
 			dns.Question{serviceInstanceName, dns.TypeSRV, dns.ClassINET},
 			dns.Question{serviceInstanceName, dns.TypeTXT, dns.ClassINET},
 		}
-		m.RecursionDesired = false
 	} else {
 		m.SetQuestion(serviceName, dns.TypePTR)
-		m.RecursionDesired = false
 	}
 	if err := c.sendQuery(m); err != nil {
 		return err
