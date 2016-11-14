@@ -86,7 +86,11 @@ func Register(instance, service, domain string, port int, text []string, iface *
 			continue
 		}
 
-		for _, address := range intf.Addrs() {
+		addrs, err := intf.Addrs()
+		if err != nil {
+			return nil, err
+		}
+		for _, address := range addrs {
 			// check the address type and if it is not a loopback the display it
 			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && !ipnet.IP.IsLinkLocalUnicast() {
 				if ipnet.IP.To4() != nil {
