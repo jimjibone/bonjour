@@ -375,7 +375,7 @@ func (s *Server) handleQuestion(q dns.Question, resp *dns.Msg) error {
 	case s.Service.ServiceInstanceName():
 		s.composeLookupAnswers(resp, s.ttl)
 	case s.Service.ServiceTypeName():
-		s.ServiceTypeName(resp, s.ttl)
+		s.serviceTypeName(resp, s.ttl)
 	}
 
 	return nil
