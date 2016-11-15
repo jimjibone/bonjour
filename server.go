@@ -309,9 +309,9 @@ func (s *Server) recv(c *net.UDPConn) {
 // parsePacket is used to parse an incoming packet
 func (s *Server) parsePacket(packet []byte, from net.Addr) error {
 	var msg dns.Msg
-	if err := msg.Unpack(packet); err != nil {
+	if err := msg.Unpack(packet); err != nil && err != dns.ErrTruncated {
 		log.Printf("[ERR] bonjour: Failed to unpack packet: %v", err)
-		return err
+		return nil
 	}
 	return s.handleQuery(&msg, from)
 }
