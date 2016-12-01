@@ -117,7 +117,7 @@ func Register(instance, service, domain string, port int, text []string, iface *
 
 	s.Service = entry
 	go s.mainloop()
-	go s.probe()
+	go s.probeloop()
 
 	return s, nil
 }
@@ -174,7 +174,7 @@ func RegisterProxy(instance, service, domain string, port int, host string, ips 
 
 	s.Service = entry
 	go s.mainloop()
-	go s.probe()
+	go s.probeloop()
 
 	return s, nil
 }
@@ -184,6 +184,7 @@ type Server struct {
 	Service      *ServiceEntry
 	ipv4conn     *net.UDPConn
 	ipv6conn     *net.UDPConn
+	quit         chan bool
 	shuttingDown bool
 	shutdownLock sync.Mutex
 	ttl          uint32
@@ -237,6 +238,7 @@ func newServer(iface *net.Interface) (*Server, error) {
 		ipv4conn: ipv4conn,
 		ipv6conn: ipv6conn,
 		ttl:      3200,
+		quit:     make(chan bool, 1),
 	}
 
 	return s, nil
@@ -277,6 +279,11 @@ func (s *Server) shutdown() error {
 		return nil
 	}
 	s.shuttingDown = true
+
+	select {
+	case s.quit <- true:
+	default:
+	}
 
 	s.unregister()
 
@@ -535,6 +542,17 @@ func (s *Server) serviceTypeName(resp *dns.Msg, ttl uint32) {
 		Ptr: s.Service.ServiceName(),
 	}
 	resp.Answer = append(resp.Answer, dnssd)
+}
+
+func (s *Server) probeloop() {
+	for !s.shuttingDown {
+		s.probe()
+
+		select {
+		case <-s.quit:
+		case <-time.After(time.Duration(s.ttl) * time.Second):
+		}
+	}
 }
 
 // Perform probing & announcement
