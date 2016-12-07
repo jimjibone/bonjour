@@ -82,7 +82,7 @@ func Register(instance, service, domain string, port int, text []string, iface *
 	}
 
 	for _, intf := range intfs {
-		if strings.HasPrefix(intf.Name, "docker") || strings.HasPrefix(intf.Name, "tun") || strings.HasPrefix(intf.Name, "bridge") {
+		if strings.HasPrefix(intf.Name, "docker") || strings.HasPrefix(intf.Name, "tun") || strings.HasPrefix(intf.Name, "bridge") || strings.HasPrefix(intf.Name, "lxcbr") {
 			continue
 		}
 
