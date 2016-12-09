@@ -503,7 +503,7 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 				Name:   s.Service.HostName,
 				Rrtype: dns.TypeA,
 				Class:  dns.ClassINET | cache_flush,
-				Ttl:    120,
+				Ttl:    ttl,
 			},
 			A: ipv4,
 		}
@@ -515,7 +515,7 @@ func (s *Server) composeLookupAnswers(resp *dns.Msg, ttl uint32) {
 				Name:   s.Service.HostName,
 				Rrtype: dns.TypeAAAA,
 				Class:  dns.ClassINET | cache_flush,
-				Ttl:    120,
+				Ttl:    ttl,
 			},
 			AAAA: ipv6,
 		}
