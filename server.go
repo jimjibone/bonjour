@@ -310,7 +310,11 @@ func (s *Server) recv(c *net.UDPConn) {
 func (s *Server) parsePacket(packet []byte, from net.Addr) error {
 	var msg dns.Msg
 	if err := msg.Unpack(packet); err != nil && err != dns.ErrTruncated {
-		log.Printf("[ERR] bonjour: Failed to unpack packet: %v", err)
+		if err.Error() == "dns: NSEC block too long" {
+			// ignore
+		} else {
+			log.Printf("[ERR] bonjour: Failed to unpack packet: %v", err)
+		}
 		return nil
 	}
 	return s.handleQuery(&msg, from)
