@@ -218,16 +218,27 @@ func (c *client) mainloop(params *LookupParams) {
 
 		if len(entries) > 0 {
 			for k, e := range entries {
+				// Send entries when new or updated.
+				send := false
+				if se, ok := sentEntries[k]; ok {
+					if !e.Equal(se) {
+						send = true
+					}
+				} else {
+					send = true
+				}
+
+				// Send and update the sent list.
+				if send {
+					params.Entries <- e
+					sentEntries[k] = e
+				}
+
+				// Remove offline entries.
 				if e.TTL == 0 {
 					delete(entries, k)
 					delete(sentEntries, k)
-					continue
 				}
-				if _, ok := sentEntries[k]; ok {
-					continue
-				}
-				params.Entries <- e
-				sentEntries[k] = e
 			}
 			// reset entries
 			entries = make(map[string]*ServiceEntry)

@@ -96,3 +96,61 @@ func NewServiceEntry(instance, service, domain string) *ServiceEntry {
 		[]net.IP{},
 	}
 }
+
+// Equal returns true if other is equal to this.
+func (s *ServiceEntry) Equal(other *ServiceEntry) bool {
+	if s.ServiceRecord.Instance != other.ServiceRecord.Instance {
+		return false
+	}
+	if s.ServiceRecord.Service != other.ServiceRecord.Service {
+		return false
+	}
+	if s.ServiceRecord.Domain != other.ServiceRecord.Domain {
+		return false
+	}
+
+	if s.HostName != other.HostName {
+		return false
+	}
+	if s.Port != other.Port {
+		return false
+	}
+	for _, st := range s.Text {
+		found := false
+		for _, ot := range other.Text {
+			if st == ot {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	if s.TTL != other.TTL {
+		return false
+	}
+	for _, sa := range s.AddrIPv4 {
+		found := false
+		for _, oa := range other.AddrIPv4 {
+			if sa.Equal(oa) {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	for _, sa := range s.AddrIPv6 {
+		found := false
+		for _, oa := range other.AddrIPv6 {
+			if sa.Equal(oa) {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
+}
